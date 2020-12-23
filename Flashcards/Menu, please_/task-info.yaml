@@ -846,6 +846,9 @@ files:
 - name: src/flashcards/CardCollection.java
   visible: true
   learner_created: true
+- name: src/flashcards/Flashcards.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/44/stages/236/implement#comment
 status: Failed
 feedback:
