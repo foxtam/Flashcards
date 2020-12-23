@@ -849,18 +849,12 @@ files:
 - name: src/flashcards/Flashcards.java
   visible: true
   learner_created: true
+- name: src/flashcards/Action.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/44/stages/236/implement#comment
-status: Failed
+status: Solved
 feedback:
-  message: |-
-    Wrong answer in test #1
-
-    Your program should prompt the user for an action with the message &quot;Input the action&quot;
-
-    Please find below the output of your program during this failed test.
-
-    ---
-
-    Input the number of cards:
-  time: Wed, 23 Dec 2020 13:30:44 UTC
+  message: Congratulations!
+  time: Wed, 23 Dec 2020 21:14:27 UTC
 record: 5

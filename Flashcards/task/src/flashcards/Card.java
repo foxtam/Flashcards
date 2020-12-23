@@ -3,6 +3,7 @@ package flashcards;
 import java.util.Objects;
 
 public class Card {
+    public static String separator = "\n\n";
     private final String term;
     private final String definition;
 
@@ -17,6 +18,11 @@ public class Card {
         if (o == null || getClass() != o.getClass()) return false;
         Card card = (Card) o;
         return Objects.equals(term, card.term) && Objects.equals(definition, card.definition);
+    }
+
+    @Override
+    public String toString() {
+        return term + separator + definition;
     }
 
     @Override

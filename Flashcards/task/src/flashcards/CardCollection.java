@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public class CardCollection implements Iterable<Card> {
 
+    public static final String separator = "\n\n\n";
+
     private final ArrayList<Card> cards = new ArrayList<>();
 
     public void addCard(Card card) {
@@ -48,5 +50,27 @@ public class CardCollection implements Iterable<Card> {
                 return cards.get(index++);
             }
         };
+    }
+
+    public void removeCard(String term) {
+        cards.removeIf(c -> c.getTerm().equals(term));
+    }
+
+    @Override
+    public String toString() {
+        ArrayList<String> cardsAsStrings = new ArrayList<>();
+        for (Card card : cards) {
+            cardsAsStrings.add(card.toString());
+        }
+        return String.join(separator, cardsAsStrings);
+    }
+
+    public int size() {
+        return cards.size();
+    }
+
+    public Card getRandomCard() {
+        int randomIndex = (int) (Math.random() * cards.size());
+        return cards.get(randomIndex);
     }
 }
