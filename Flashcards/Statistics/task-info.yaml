@@ -593,6 +593,274 @@ files:
     \   \"London\",\n                \"Abuja\",\n                \"Berlin\"\n    \
     \    );\n    }\n    \n}\n\n\n\n\n"
   learner_created: false
+- name: src/flashcards/Flashcards.java
+  visible: true
+  text: |
+    package flashcards;
+
+    import java.io.FileWriter;
+    import java.io.IOException;
+    import java.nio.file.Files;
+    import java.nio.file.Path;
+    import java.util.Optional;
+    import java.util.Scanner;
+
+    public class Flashcards {
+
+        static Scanner scanner = new Scanner(System.in);
+
+        private final CardCollection cards = new CardCollection();
+
+        public void commandAdd() {
+            System.out.println("The card:");
+            String term = scanner.nextLine();
+            if (cards.hasCardWithTerm(term)) {
+                System.out.printf("The card \"%s\" already exists.%n", term);
+                return;
+            }
+
+            System.out.println("The definition of the card:");
+            String definition = scanner.nextLine();
+            if (cards.hasCardWithDefinition(definition)) {
+                System.out.printf("The definition \"%s\" already exists.%n", definition);
+                return;
+            }
+
+            cards.addCard(new Card(term, definition));
+            System.out.printf("The pair (\"%s\":\"%s\") has been added.%n%n", term, definition);
+        }
+
+        public void commandRemove() {
+            System.out.println("Which card?");
+            String term = scanner.nextLine();
+            if (cards.hasCardWithTerm(term)) {
+                cards.removeCard(term);
+                System.out.println("The card has been removed.\n");
+            } else {
+                System.out.printf("Can't remove \"%s\": there is no such card.%n%n", term);
+            }
+        }
+
+        public void commandExport() {
+            System.out.println("File name:");
+            String fileName = scanner.nextLine();
+
+            try (FileWriter writer = new FileWriter(fileName)) {
+                writer.write(cards.toString());
+                System.out.println(cards.size() + " cards have been saved.\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void commandImport() {
+            System.out.println("File name:");
+            String fileName = scanner.nextLine();
+
+            try {
+                tryImport(fileName);
+            } catch (IOException e) {
+                System.out.println("File not found.\n");
+            }
+        }
+
+        private void tryImport(String fileName) throws IOException {
+            String text = Files.readString(Path.of(fileName));
+            String[] allCardsText = text.split(CardCollection.separator);
+            for (String cardText : allCardsText) {
+                addOrReplaceCard(cardText);
+            }
+            System.out.println(allCardsText.length + " cards have been loaded.\n");
+        }
+
+        private void addOrReplaceCard(String cardText) {
+            String[] termDefinition = cardText.split(Card.separator);
+            String term = termDefinition[0];
+            String definition = termDefinition[1];
+            if (cards.hasCardWithTerm(term)) cards.removeCard(term);
+            cards.addCard(new Card(term, definition));
+        }
+
+        public void commandAsk() {
+            System.out.println("How many times to ask?");
+            int asksCount = Integer.parseInt(scanner.nextLine());
+            askRandomQuestions(asksCount);
+        }
+
+        private void askRandomQuestions(int asksCount) {
+            for (int i = 0; i < asksCount; i++) {
+                Card card = cards.getRandomCard();
+                System.out.printf("Print the definition of \"%s\":%n", card.getTerm());
+                String userInput = scanner.nextLine();
+                checkAnswer(card, userInput);
+            }
+        }
+
+        private void checkAnswer(Card card, String userDefinition) {
+            Optional<Card> optionalCard = cards.getCardWithDefinition(userDefinition);
+            if (optionalCard.isPresent()) {
+                if (optionalCard.get().equals(card)) {
+                    System.out.println("Correct!");
+                } else {
+                    System.out.printf("Wrong. The right answer is \"%s\", but your definition is correct for \"%s\".%n",
+                            card.getDefinition(), optionalCard.get().getTerm());
+                }
+            } else {
+                System.out.printf("Wrong. The right answer is \"%s\".%n", card.getDefinition());
+            }
+        }
+    }
+  learner_created: true
+- name: src/flashcards/CardCollection.java
+  visible: true
+  text: |
+    package flashcards;
+
+    import org.jetbrains.annotations.NotNull;
+
+    import java.util.ArrayList;
+    import java.util.Iterator;
+    import java.util.Optional;
+
+    public class CardCollection implements Iterable<Card> {
+
+        public static final String separator = "\n\n\n";
+
+        private final ArrayList<Card> cards = new ArrayList<>();
+
+        public void addCard(Card card) {
+            cards.add(card);
+        }
+
+        public boolean hasCardWithTerm(String term) {
+            for (Card card : cards) {
+                if (card.getTerm().equals(term)) return true;
+            }
+            return false;
+        }
+
+        public boolean hasCardWithDefinition(String definition) {
+            return getCardWithDefinition(definition).isPresent();
+        }
+
+        public Optional<Card> getCardWithDefinition(String definition) {
+            for (Card card : cards) {
+                if (card.getDefinition().equals(definition)) return Optional.of(card);
+            }
+            return Optional.empty();
+        }
+
+        @NotNull
+        @Override
+        public Iterator<Card> iterator() {
+            return new Iterator<>() {
+                private int index = 0;
+
+                @Override
+                public boolean hasNext() {
+                    return index < cards.size();
+                }
+
+                @Override
+                public Card next() {
+                    return cards.get(index++);
+                }
+            };
+        }
+
+        public void removeCard(String term) {
+            cards.removeIf(c -> c.getTerm().equals(term));
+        }
+
+        @Override
+        public String toString() {
+            ArrayList<String> cardsAsStrings = new ArrayList<>();
+            for (Card card : cards) {
+                cardsAsStrings.add(card.toString());
+            }
+            return String.join(separator, cardsAsStrings);
+        }
+
+        public int size() {
+            return cards.size();
+        }
+
+        public Card getRandomCard() {
+            int randomIndex = (int) (Math.random() * cards.size());
+            return cards.get(randomIndex);
+        }
+    }
+  learner_created: true
+- name: src/flashcards/Card.java
+  visible: true
+  text: |
+    package flashcards;
+
+    import java.util.Objects;
+
+    public class Card {
+        public static String separator = "\n\n";
+        private final String term;
+        private final String definition;
+
+        public Card(String term, String definition) {
+            this.term = term;
+            this.definition = definition;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Card card = (Card) o;
+            return Objects.equals(term, card.term) && Objects.equals(definition, card.definition);
+        }
+
+        @Override
+        public String toString() {
+            return term + separator + definition;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(term, definition);
+        }
+
+        public String getTerm() {
+            return term;
+        }
+
+        public String getDefinition() {
+            return definition;
+        }
+    }
+  learner_created: true
+- name: src/flashcards/Action.java
+  visible: true
+  text: |
+    package flashcards;
+
+    import java.util.Locale;
+
+    public enum Action {
+        ADD,
+        REMOVE,
+        IMPORT,
+        EXPORT,
+        ASK,
+        EXIT;
+
+        public String lowerName() {
+            return this.name().toLowerCase(Locale.ROOT);
+        }
+    }
+  learner_created: true
+- name: src/flashcards/LoggedIO.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/44/stages/237/implement#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Thu, 24 Dec 2020 17:21:13 UTC
 record: -1

@@ -6,10 +6,16 @@ public class Card {
     public static String separator = "\n\n";
     private final String term;
     private final String definition;
+    private int errorCount;
 
     public Card(String term, String definition) {
+        this(term, definition, 0);
+    }
+
+    public Card(String term, String definition, int errorCount) {
         this.term = term;
         this.definition = definition;
+        this.errorCount = errorCount;
     }
 
     @Override
@@ -22,7 +28,7 @@ public class Card {
 
     @Override
     public String toString() {
-        return term + separator + definition;
+        return term + separator + definition + separator + errorCount;
     }
 
     @Override
@@ -36,5 +42,17 @@ public class Card {
 
     public String getDefinition() {
         return definition;
+    }
+
+    public int getErrorCount() {
+        return errorCount;
+    }
+
+    public void incrementErrorCounter() {
+        errorCount++;
+    }
+
+    public void resetErrorCount() {
+        errorCount = 0;
     }
 }

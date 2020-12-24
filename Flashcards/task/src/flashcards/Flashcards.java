@@ -4,96 +4,96 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Optional;
-import java.util.Scanner;
 
 public class Flashcards {
-
-    static Scanner scanner = new Scanner(System.in);
 
     private final CardCollection cards = new CardCollection();
 
     public void commandAdd() {
-        System.out.println("The card:");
-        String term = scanner.nextLine();
+        LoggedIO.out.println("The card:");
+        String term = LoggedIO.in.nextLine();
         if (cards.hasCardWithTerm(term)) {
-            System.out.printf("The card \"%s\" already exists.%n", term);
+            LoggedIO.out.printf("The card \"%s\" already exists.%n", term);
             return;
         }
 
-        System.out.println("The definition of the card:");
-        String definition = scanner.nextLine();
+        LoggedIO.out.println("The definition of the card:");
+        String definition = LoggedIO.in.nextLine();
         if (cards.hasCardWithDefinition(definition)) {
-            System.out.printf("The definition \"%s\" already exists.%n", definition);
+            LoggedIO.out.printf("The definition \"%s\" already exists.%n", definition);
             return;
         }
 
         cards.addCard(new Card(term, definition));
-        System.out.printf("The pair (\"%s\":\"%s\") has been added.%n%n", term, definition);
+        LoggedIO.out.printf("The pair (\"%s\":\"%s\") has been added.%n%n", term, definition);
     }
 
     public void commandRemove() {
-        System.out.println("Which card?");
-        String term = scanner.nextLine();
+        LoggedIO.out.println("Which card?");
+        String term = LoggedIO.in.nextLine();
         if (cards.hasCardWithTerm(term)) {
             cards.removeCard(term);
-            System.out.println("The card has been removed.\n");
+            LoggedIO.out.println("The card has been removed.\n");
         } else {
-            System.out.printf("Can't remove \"%s\": there is no such card.%n%n", term);
+            LoggedIO.out.printf("Can't remove \"%s\": there is no such card.%n%n", term);
         }
     }
 
     public void commandExport() {
-        System.out.println("File name:");
-        String fileName = scanner.nextLine();
+        LoggedIO.out.println("File name:");
+        String fileName = LoggedIO.in.nextLine();
 
         try (FileWriter writer = new FileWriter(fileName)) {
             writer.write(cards.toString());
-            System.out.println(cards.size() + " cards have been saved.\n");
+            LoggedIO.out.println(cards.size() + " cards have been saved.\n");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void commandImport() {
-        System.out.println("File name:");
-        String fileName = scanner.nextLine();
+        LoggedIO.out.println("File name:");
+        String fileName = LoggedIO.in.nextLine();
 
         try {
             tryImport(fileName);
         } catch (IOException e) {
-            System.out.println("File not found.\n");
+            LoggedIO.out.println("File not found.\n");
         }
     }
 
     private void tryImport(String fileName) throws IOException {
         String text = Files.readString(Path.of(fileName));
         String[] allCardsText = text.split(CardCollection.separator);
-        for (String cardText : allCardsText) {
+        for (String cardText : allCardsText)
             addOrReplaceCard(cardText);
-        }
-        System.out.println(allCardsText.length + " cards have been loaded.\n");
+        LoggedIO.out.println(allCardsText.length + " cards have been loaded.\n");
     }
 
     private void addOrReplaceCard(String cardText) {
-        String[] termDefinition = cardText.split(Card.separator);
-        String term = termDefinition[0];
-        String definition = termDefinition[1];
-        if (cards.hasCardWithTerm(term)) cards.removeCard(term);
-        cards.addCard(new Card(term, definition));
+        String[] cardTextData = cardText.split(Card.separator);
+        String term = cardTextData[0];
+        String definition = cardTextData[1];
+        int errorCount = Integer.parseInt(cardTextData[2]);
+        if (cards.hasCardWithTerm(term))
+            cards.removeCard(term);
+        cards.addCard(new Card(term, definition, errorCount));
     }
 
     public void commandAsk() {
-        System.out.println("How many times to ask?");
-        int asksCount = Integer.parseInt(scanner.nextLine());
+        LoggedIO.out.println("How many times to ask?");
+        int asksCount = Integer.parseInt(LoggedIO.in.nextLine());
         askRandomQuestions(asksCount);
     }
 
     private void askRandomQuestions(int asksCount) {
         for (int i = 0; i < asksCount; i++) {
             Card card = cards.getRandomCard();
-            System.out.printf("Print the definition of \"%s\":%n", card.getTerm());
-            String userInput = scanner.nextLine();
+            LoggedIO.out.printf("Print the definition of \"%s\":%n", card.getTerm());
+            String userInput = LoggedIO.in.nextLine();
             checkAnswer(card, userInput);
         }
     }
@@ -102,13 +102,67 @@ public class Flashcards {
         Optional<Card> optionalCard = cards.getCardWithDefinition(userDefinition);
         if (optionalCard.isPresent()) {
             if (optionalCard.get().equals(card)) {
-                System.out.println("Correct!");
+                LoggedIO.out.println("Correct!");
             } else {
-                System.out.printf("Wrong. The right answer is \"%s\", but your definition is correct for \"%s\".%n",
+                card.incrementErrorCounter();
+                LoggedIO.out.printf("Wrong. The right answer is \"%s\", but your definition is correct for \"%s\".%n",
                         card.getDefinition(), optionalCard.get().getTerm());
             }
         } else {
-            System.out.printf("Wrong. The right answer is \"%s\".%n", card.getDefinition());
+            card.incrementErrorCounter();
+            LoggedIO.out.printf("Wrong. The right answer is \"%s\".%n", card.getDefinition());
         }
+    }
+
+    public void commandLog() {
+        LoggedIO.out.println("File name:");
+        String fileName = LoggedIO.in.nextLine();
+        String text = LoggedIO.getLog();
+        try {
+            Files.writeString(Path.of(fileName), text);
+            LoggedIO.out.println("The log has been saved.\n");
+        } catch (IOException e) {
+            LoggedIO.out.println("File not found.\n");
+        }
+    }
+
+    public void commandHardestCard() {
+        Collection<Card> errorCards = findCardsWithMaxErrors();
+        if (errorCards.isEmpty()) {
+            LoggedIO.out.println("There are no cards with errors.\n");
+        } else if (errorCards.size() == 1) {
+            Card card = errorCards.iterator().next();
+            LoggedIO.out.printf("The hardest card is \"%s\". You have %d errors answering it%n%n",
+                    card.getTerm(), card.getErrorCount());
+        } else {
+            ArrayList<String> terms = new ArrayList<>();
+            for (Card card : errorCards)
+                terms.add(card.getTerm());
+            Card card = errorCards.iterator().next();
+            LoggedIO.out.printf("The hardest cards are \"%s\". You have %d errors answering them%n%n",
+                    String.join("\", \"", terms), card.getErrorCount());
+        }
+    }
+
+    private ArrayList<Card> findCardsWithMaxErrors() {
+        int errorLevel = 1;
+        ArrayList<Card> errorCards = new ArrayList<>();
+        for (Card card : cards) {
+            if (card.getErrorCount() == errorLevel) {
+                errorCards.add(card);
+            } else if (card.getErrorCount() > errorLevel) {
+                errorCards.clear();
+                errorCards.add(card);
+                errorLevel = card.getErrorCount();
+            }
+        }
+        return errorCards;
+    }
+
+    public void commandResetStats() {
+        for (Card card : cards) {
+            card.resetErrorCount();
+        }
+        LoggedIO.out.println("Card statistics have been reset.\n");
     }
 }

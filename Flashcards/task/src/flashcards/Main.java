@@ -1,32 +1,30 @@
 package flashcards;
 
-import java.util.Locale;
-import java.util.Scanner;
+import java.util.ArrayList;
 
 public class Main {
-
-    static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
         Flashcards flashcards = new Flashcards();
         while (true) {
-            System.out.println("Input the action (" + joinedActionNames() + "):");
-            String input = scanner.nextLine().trim();
-            Action action = Action.valueOf(input.toUpperCase(Locale.ROOT));
+            LoggedIO.out.println("Input the action (" + joinedActionNames() + "):");
+            String input = LoggedIO.in.nextLine();
+            Action action = Action.fromStringCommand(input);
 
-            if (action == Action.EXIT) break;
-            else runCommand(action, flashcards);
+            if (action == Action.EXIT)
+                break;
+            else
+                runCommand(action, flashcards);
         }
-        System.out.println("Bye bye!");
+        LoggedIO.out.println("Bye bye!");
     }
 
     private static String joinedActionNames() {
-        StringBuilder builder = new StringBuilder();
+        ArrayList<String> commands = new ArrayList<>();
         for (Action action : Action.values()) {
-            builder.append(action.lowerName()).append(", ");
+            commands.add(action.stringCommand);
         }
-        builder.delete(builder.length() - 2, builder.length());
-        return builder.toString();
+        return String.join(", ", commands);
     }
 
     private static void runCommand(Action action, Flashcards flashcards) {
@@ -45,6 +43,15 @@ public class Main {
                 break;
             case ASK:
                 flashcards.commandAsk();
+                break;
+            case LOG:
+                flashcards.commandLog();
+                break;
+            case HARDEST_CARD:
+                flashcards.commandHardestCard();
+                break;
+            case RESET_STATS:
+                flashcards.commandResetStats();
                 break;
             default:
                 throw new IllegalArgumentException();

@@ -1,16 +1,27 @@
 package flashcards;
 
-import java.util.Locale;
-
 public enum Action {
-    ADD,
-    REMOVE,
-    IMPORT,
-    EXPORT,
-    ASK,
-    EXIT;
+    ADD("add"),
+    REMOVE("remove"),
+    IMPORT("import"),
+    EXPORT("export"),
+    ASK("ask"),
+    EXIT("exit"),
+    LOG("log"),
+    HARDEST_CARD("hardest card"),
+    RESET_STATS("reset stats");
 
-    public String lowerName() {
-        return this.name().toLowerCase(Locale.ROOT);
+    public final String stringCommand;
+
+    Action(String stringCommand) {
+        this.stringCommand = stringCommand;
+    }
+
+    public static Action fromStringCommand(String stringCommand) {
+        for (Action action : values()) {
+            if (action.stringCommand.equals(stringCommand))
+                return action;
+        }
+        throw new IllegalArgumentException(stringCommand);
     }
 }
