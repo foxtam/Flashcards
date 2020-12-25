@@ -12,6 +12,10 @@ public class Flashcards {
 
     private final CardCollection cards = new CardCollection();
 
+    public Flashcards() {
+
+    }
+
     public void commandAdd() {
         LoggedIO.out.println("The card:");
         String term = LoggedIO.in.nextLine();
@@ -45,8 +49,11 @@ public class Flashcards {
     public void commandExport() {
         LoggedIO.out.println("File name:");
         String fileName = LoggedIO.in.nextLine();
+        exportTo(Path.of(fileName));
+    }
 
-        try (FileWriter writer = new FileWriter(fileName)) {
+    public void exportTo(Path fileName) {
+        try (FileWriter writer = new FileWriter(fileName.toString())) {
             writer.write(cards.toString());
             LoggedIO.out.println(cards.size() + " cards have been saved.\n");
         } catch (IOException e) {
@@ -57,7 +64,10 @@ public class Flashcards {
     public void commandImport() {
         LoggedIO.out.println("File name:");
         String fileName = LoggedIO.in.nextLine();
+        importFrom(Path.of(fileName));
+    }
 
+    public void importFrom(Path fileName) {
         try {
             tryImport(fileName);
         } catch (IOException e) {
@@ -65,11 +75,12 @@ public class Flashcards {
         }
     }
 
-    private void tryImport(String fileName) throws IOException {
-        String text = Files.readString(Path.of(fileName));
+    private void tryImport(Path fileName) throws IOException {
+        String text = Files.readString(fileName);
         String[] allCardsText = text.split(CardCollection.separator);
-        for (String cardText : allCardsText)
+        for (String cardText : allCardsText) {
             addOrReplaceCard(cardText);
+        }
         LoggedIO.out.println(allCardsText.length + " cards have been loaded.\n");
     }
 
@@ -78,8 +89,9 @@ public class Flashcards {
         String term = cardTextData[0];
         String definition = cardTextData[1];
         int errorCount = Integer.parseInt(cardTextData[2]);
-        if (cards.hasCardWithTerm(term))
+        if (cards.hasCardWithTerm(term)) {
             cards.removeCard(term);
+        }
         cards.addCard(new Card(term, definition, errorCount));
     }
 
@@ -136,8 +148,9 @@ public class Flashcards {
                     card.getTerm(), card.getErrorCount());
         } else {
             ArrayList<String> terms = new ArrayList<>();
-            for (Card card : errorCards)
+            for (Card card : errorCards) {
                 terms.add(card.getTerm());
+            }
             Card card = errorCards.iterator().next();
             LoggedIO.out.printf("The hardest cards are \"%s\". You have %d errors answering them%n%n",
                     String.join("\", \"", terms), card.getErrorCount());

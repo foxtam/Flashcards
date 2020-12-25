@@ -638,6 +638,398 @@ files:
     \                \"Moscow\",\n                \"London\",\n                \"\
     Abuja\",\n                \"Berlin\"\n        );\n    }\n    \n}\n"
   learner_created: false
+- name: src/flashcards/Flashcards.java
+  visible: true
+  text: |
+    package flashcards;
+
+    import java.io.FileWriter;
+    import java.io.IOException;
+    import java.nio.file.Files;
+    import java.nio.file.Path;
+    import java.util.ArrayList;
+    import java.util.Collection;
+    import java.util.Optional;
+
+    public class Flashcards {
+
+        private final CardCollection cards = new CardCollection();
+
+        public void commandAdd() {
+            LoggedIO.out.println("The card:");
+            String term = LoggedIO.in.nextLine();
+            if (cards.hasCardWithTerm(term)) {
+                LoggedIO.out.printf("The card \"%s\" already exists.%n", term);
+                return;
+            }
+
+            LoggedIO.out.println("The definition of the card:");
+            String definition = LoggedIO.in.nextLine();
+            if (cards.hasCardWithDefinition(definition)) {
+                LoggedIO.out.printf("The definition \"%s\" already exists.%n", definition);
+                return;
+            }
+
+            cards.addCard(new Card(term, definition));
+            LoggedIO.out.printf("The pair (\"%s\":\"%s\") has been added.%n%n", term, definition);
+        }
+
+        public void commandRemove() {
+            LoggedIO.out.println("Which card?");
+            String term = LoggedIO.in.nextLine();
+            if (cards.hasCardWithTerm(term)) {
+                cards.removeCard(term);
+                LoggedIO.out.println("The card has been removed.\n");
+            } else {
+                LoggedIO.out.printf("Can't remove \"%s\": there is no such card.%n%n", term);
+            }
+        }
+
+        public void commandExport() {
+            LoggedIO.out.println("File name:");
+            String fileName = LoggedIO.in.nextLine();
+
+            try (FileWriter writer = new FileWriter(fileName)) {
+                writer.write(cards.toString());
+                LoggedIO.out.println(cards.size() + " cards have been saved.\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void commandImport() {
+            LoggedIO.out.println("File name:");
+            String fileName = LoggedIO.in.nextLine();
+
+            try {
+                tryImport(fileName);
+            } catch (IOException e) {
+                LoggedIO.out.println("File not found.\n");
+            }
+        }
+
+        private void tryImport(String fileName) throws IOException {
+            String text = Files.readString(Path.of(fileName));
+            String[] allCardsText = text.split(CardCollection.separator);
+            for (String cardText : allCardsText)
+                addOrReplaceCard(cardText);
+            LoggedIO.out.println(allCardsText.length + " cards have been loaded.\n");
+        }
+
+        private void addOrReplaceCard(String cardText) {
+            String[] cardTextData = cardText.split(Card.separator);
+            String term = cardTextData[0];
+            String definition = cardTextData[1];
+            int errorCount = Integer.parseInt(cardTextData[2]);
+            if (cards.hasCardWithTerm(term))
+                cards.removeCard(term);
+            cards.addCard(new Card(term, definition, errorCount));
+        }
+
+        public void commandAsk() {
+            LoggedIO.out.println("How many times to ask?");
+            int asksCount = Integer.parseInt(LoggedIO.in.nextLine());
+            askRandomQuestions(asksCount);
+        }
+
+        private void askRandomQuestions(int asksCount) {
+            for (int i = 0; i < asksCount; i++) {
+                Card card = cards.getRandomCard();
+                LoggedIO.out.printf("Print the definition of \"%s\":%n", card.getTerm());
+                String userInput = LoggedIO.in.nextLine();
+                checkAnswer(card, userInput);
+            }
+        }
+
+        private void checkAnswer(Card card, String userDefinition) {
+            Optional<Card> optionalCard = cards.getCardWithDefinition(userDefinition);
+            if (optionalCard.isPresent()) {
+                if (optionalCard.get().equals(card)) {
+                    LoggedIO.out.println("Correct!");
+                } else {
+                    card.incrementErrorCounter();
+                    LoggedIO.out.printf("Wrong. The right answer is \"%s\", but your definition is correct for \"%s\".%n",
+                            card.getDefinition(), optionalCard.get().getTerm());
+                }
+            } else {
+                card.incrementErrorCounter();
+                LoggedIO.out.printf("Wrong. The right answer is \"%s\".%n", card.getDefinition());
+            }
+        }
+
+        public void commandLog() {
+            LoggedIO.out.println("File name:");
+            String fileName = LoggedIO.in.nextLine();
+            String text = LoggedIO.getLog();
+            try {
+                Files.writeString(Path.of(fileName), text);
+                LoggedIO.out.println("The log has been saved.\n");
+            } catch (IOException e) {
+                LoggedIO.out.println("File not found.\n");
+            }
+        }
+
+        public void commandHardestCard() {
+            Collection<Card> errorCards = findCardsWithMaxErrors();
+            if (errorCards.isEmpty()) {
+                LoggedIO.out.println("There are no cards with errors.\n");
+            } else if (errorCards.size() == 1) {
+                Card card = errorCards.iterator().next();
+                LoggedIO.out.printf("The hardest card is \"%s\". You have %d errors answering it%n%n",
+                        card.getTerm(), card.getErrorCount());
+            } else {
+                ArrayList<String> terms = new ArrayList<>();
+                for (Card card : errorCards)
+                    terms.add(card.getTerm());
+                Card card = errorCards.iterator().next();
+                LoggedIO.out.printf("The hardest cards are \"%s\". You have %d errors answering them%n%n",
+                        String.join("\", \"", terms), card.getErrorCount());
+            }
+        }
+
+        private ArrayList<Card> findCardsWithMaxErrors() {
+            int errorLevel = 1;
+            ArrayList<Card> errorCards = new ArrayList<>();
+            for (Card card : cards) {
+                if (card.getErrorCount() == errorLevel) {
+                    errorCards.add(card);
+                } else if (card.getErrorCount() > errorLevel) {
+                    errorCards.clear();
+                    errorCards.add(card);
+                    errorLevel = card.getErrorCount();
+                }
+            }
+            return errorCards;
+        }
+
+        public void commandResetStats() {
+            for (Card card : cards) {
+                card.resetErrorCount();
+            }
+            LoggedIO.out.println("Card statistics have been reset.\n");
+        }
+    }
+  learner_created: true
+- name: src/flashcards/CardCollection.java
+  visible: true
+  text: |
+    package flashcards;
+
+    import org.jetbrains.annotations.NotNull;
+
+    import java.util.ArrayList;
+    import java.util.Iterator;
+    import java.util.Optional;
+
+    public class CardCollection implements Iterable<Card> {
+
+        public static final String separator = "\n\n\n";
+
+        private final ArrayList<Card> cards = new ArrayList<>();
+
+        public void addCard(Card card) {
+            cards.add(card);
+        }
+
+        public boolean hasCardWithTerm(String term) {
+            for (Card card : cards) {
+                if (card.getTerm().equals(term)) return true;
+            }
+            return false;
+        }
+
+        public boolean hasCardWithDefinition(String definition) {
+            return getCardWithDefinition(definition).isPresent();
+        }
+
+        public Optional<Card> getCardWithDefinition(String definition) {
+            for (Card card : cards) {
+                if (card.getDefinition().equals(definition)) return Optional.of(card);
+            }
+            return Optional.empty();
+        }
+
+        @NotNull
+        @Override
+        public Iterator<Card> iterator() {
+            return new Iterator<>() {
+                private int index = 0;
+
+                @Override
+                public boolean hasNext() {
+                    return index < cards.size();
+                }
+
+                @Override
+                public Card next() {
+                    return cards.get(index++);
+                }
+            };
+        }
+
+        public void removeCard(String term) {
+            cards.removeIf(c -> c.getTerm().equals(term));
+        }
+
+        @Override
+        public String toString() {
+            ArrayList<String> cardsAsStrings = new ArrayList<>();
+            for (Card card : cards) {
+                cardsAsStrings.add(card.toString());
+            }
+            return String.join(separator, cardsAsStrings);
+        }
+
+        public int size() {
+            return cards.size();
+        }
+
+        public Card getRandomCard() {
+            int randomIndex = (int) (Math.random() * cards.size());
+            return cards.get(randomIndex);
+        }
+    }
+  learner_created: true
+- name: src/flashcards/Card.java
+  visible: true
+  text: |
+    package flashcards;
+
+    import java.util.Objects;
+
+    public class Card {
+        public static String separator = "\n\n";
+        private final String term;
+        private final String definition;
+        private int errorCount;
+
+        public Card(String term, String definition) {
+            this(term, definition, 0);
+        }
+
+        public Card(String term, String definition, int errorCount) {
+            this.term = term;
+            this.definition = definition;
+            this.errorCount = errorCount;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Card card = (Card) o;
+            return Objects.equals(term, card.term) && Objects.equals(definition, card.definition);
+        }
+
+        @Override
+        public String toString() {
+            return term + separator + definition + separator + errorCount;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(term, definition);
+        }
+
+        public String getTerm() {
+            return term;
+        }
+
+        public String getDefinition() {
+            return definition;
+        }
+
+        public int getErrorCount() {
+            return errorCount;
+        }
+
+        public void incrementErrorCounter() {
+            errorCount++;
+        }
+
+        public void resetErrorCount() {
+            errorCount = 0;
+        }
+    }
+  learner_created: true
+- name: src/flashcards/LoggedIO.java
+  visible: true
+  text: |
+    package flashcards;
+
+    import java.util.ArrayList;
+    import java.util.Scanner;
+
+    public class LoggedIO {
+
+        public static final LoggedInput in = new LoggedInput();
+        public static final LoggedOutput out = new LoggedOutput();
+        private static final ArrayList<String> logBuffer = new ArrayList<>();
+        static Scanner scanner = new Scanner(System.in);
+
+        private LoggedIO() {
+        }
+
+        public static String getLog() {
+            return String.join("\n", logBuffer);
+        }
+
+        public static class LoggedInput {
+            public String nextLine() {
+                String line = scanner.nextLine().trim();
+                logBuffer.add(line);
+                return line;
+            }
+        }
+
+        public static class LoggedOutput {
+            public void printf(String format, Object... args) {
+                String line = String.format(format, args);
+                logBuffer.add(line);
+                System.out.print(line);
+            }
+
+            public void println(String line) {
+                logBuffer.add(line);
+                System.out.println(line);
+            }
+        }
+    }
+  learner_created: true
+- name: src/flashcards/Action.java
+  visible: true
+  text: |
+    package flashcards;
+
+    public enum Action {
+        ADD("add"),
+        REMOVE("remove"),
+        IMPORT("import"),
+        EXPORT("export"),
+        ASK("ask"),
+        EXIT("exit"),
+        LOG("log"),
+        HARDEST_CARD("hardest card"),
+        RESET_STATS("reset stats");
+
+        public final String stringCommand;
+
+        Action(String stringCommand) {
+            this.stringCommand = stringCommand;
+        }
+
+        public static Action fromStringCommand(String stringCommand) {
+            for (Action action : values()) {
+                if (action.stringCommand.equals(stringCommand))
+                    return action;
+            }
+            throw new IllegalArgumentException(stringCommand);
+        }
+    }
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/44/stages/238/implement#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Fri, 25 Dec 2020 16:44:29 UTC
 record: -1
