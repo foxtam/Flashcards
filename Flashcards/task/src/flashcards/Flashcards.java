@@ -12,10 +12,6 @@ public class Flashcards {
 
     private final CardCollection cards = new CardCollection();
 
-    public Flashcards() {
-
-    }
-
     public void commandAdd() {
         LoggedIO.out.println("The card:");
         String term = LoggedIO.in.nextLine();
